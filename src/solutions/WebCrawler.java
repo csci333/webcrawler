@@ -1,13 +1,7 @@
 package solutions;
 
 import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
-import java.util.Queue;
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -15,38 +9,48 @@ import org.jsoup.select.Elements;
 
 public class WebCrawler {
 
-	private Index index;
-    private Queue<String> queue;
+	private Database index;
+    private LinkQueue queue;
     private int numPagesCrawled = 0;
-    private int maxPagesToCrawl = 10;
+    private int maxPagesToCrawl = 100;
 
     public WebCrawler(String baseURL) {
-    	this.index = new Index();
-        this.queue = new ArrayDeque<String>();
+    	this.index = new Database();
+    	this.queue = new LinkQueue();
         this.queue.add(baseURL);
     }
 
     public void start() {
     	System.out.println("Starting!");
-    	while (this.queue.size() > 0 && this.numPagesCrawled <= maxPagesToCrawl) {
-    		//1. Fetch the HTML code
+    	while (this.queue.size() > 0 && this.numPagesCrawled <= this.maxPagesToCrawl) {
+    		
+    		// Fetch the HTML code
     		String url = this.queue.remove();
-    		this.index.add(new WebPage(url));
-        	try {
-        		System.out.println("Processing " + url + "...");
-                Document document = Jsoup.connect(url).get();
-                //3. Parse the HTML to extract links to other URLs
+    		try {
+    			System.out.println("Processing " + url + "...");
+                
+        		Document document = Jsoup.connect(url).get();
+        		this.index.add(new WebPage(url, document));
+                this.index.save();
+        		
+                
+                // Parse the HTML to extract links to other URLs
                 Elements linksOnPage = document.select("a[href]");
 
-                //5. For each extracted URL... go back to Step 4.
+                // For each extracted URL... go back to Step 4.
                 for (String link : this.getLinksOnPageUnique(linksOnPage)) {
-                	if (this.index.get(link) == null) {
-                		this.queue.add(link);
-                	} else {
-                		//this.tracker.put(link, );
+                	// add to the queue if not in there already and page hasn't been crawled:
+                	if (this.index.get(link) == null && !this.queue.contains(link)) {
+                		if (link.startsWith("http")) {
+                			this.queue.add(link);
+                		}
+                	} else if (this.index.get(link) != null) {
+                		// if page has already been crawled, increment page rank:
                 		this.index.get(link).numInboundLinks += 1;
                 	}
                 }
+                this.queue.save();
+                
                 ++this.numPagesCrawled;
             } catch (IOException e) {
                 System.err.println("For '" + url + "': " + e.getMessage());
@@ -54,7 +58,6 @@ public class WebCrawler {
         	try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
     	} 
@@ -80,24 +83,16 @@ public class WebCrawler {
     	return link;
     }
     
-    public void printQueue() {
-    	int counter = 1;
-    	for (String link : this.queue) {
-    		System.out.println(counter + ". " + link);
-    		++counter;
-    	}
-    }
-    
 
     public static void main(String[] args) {
+    	
         //1. Pick a URL from the frontier
     	WebCrawler crawler = new WebCrawler("https://www.unca.edu/");
     	crawler.start();
     	System.out.println("Links in the Queue");
-    	crawler.printQueue();
+    	crawler.queue.print();
     	System.out.println("Links that have been crawled");
     	crawler.index.print();
-    	crawler.index.save();
     }
 
 }
