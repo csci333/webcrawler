@@ -6,44 +6,41 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayDeque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 public class LinkQueue {
 
-	private Queue<String> queue;
+	private Map<Integer, Node> nodes = new HashMap<Integer, Node>();
 	
     public LinkQueue() {
-    	this.queue = new ArrayDeque<String>();	
     	this.load(); // remembers previously queued urls
     }
     
-    public void add(String url) {
-    	this.queue.add(url);
+    public void add(WebPage from, WebPage to) {
+    	Node entry = this.nodes.get(from.id);
+    	if (entry != null) {
+    		entry.add(to);
+    	} else {
+    		this.nodes.put(from.id, new Node(from, to));
+    	}
     }
     
     public int size() {
-    	return this.queue.size();
+    	return this.nodes.size();
     }
     
-    public String remove() {
-    	return this.queue.remove();
-    }
-    
-    public boolean contains(String url) {
-//    	String key = this.generateKey(url);
-    	return this.queue.contains(url);
-    }
     
     public void print() {
-    	int counter = 1;
-    	for (String link : this.queue) {
-    		System.out.println(counter + ". " + link);
-    		++counter;
+    	for (Node node : this.nodes.values()) {
+    		System.out.println(node);
     	}
     }
     
@@ -62,9 +59,10 @@ public class LinkQueue {
 		}
 		JSONParser parser = new JSONParser();
         try (Reader reader = new FileReader(filePath)) {
-        	JSONArray urls = (JSONArray)parser.parse(reader);
-            for (String url : (List<String>)urls) {
-            	this.queue.add(url);
+        	JSONArray nodeObjects = (JSONArray)parser.parse(reader);
+            for (Object nodeObject : nodeObjects) {
+            	Node node = new Node((JSONObject)nodeObject);
+            	this.nodes.put(node.from, node);
             }
 
         } catch (IOException e) {
@@ -74,12 +72,13 @@ public class LinkQueue {
         }
 	}
 	
+	
 	@SuppressWarnings("unchecked")
 	public void save() {
 		JSONArray pages = new JSONArray();
-		 for (String item: this.queue) {
-			 pages.add(item);
-        }
+		for (Integer key: this.nodes.keySet()) {
+			pages.add(this.nodes.get(key).toJSON());
+    	}
 		
         try (FileWriter file = new FileWriter(this.getFilePath())) {
             file.write(pages.toJSONString());

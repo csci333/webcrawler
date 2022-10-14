@@ -9,51 +9,58 @@ import org.jsoup.select.Elements;
 
 public class WebCrawler {
 
-	private Database index;
+	private Database database;
     private LinkQueue queue;
     private int numPagesCrawled = 0;
     private int maxPagesToCrawl = 100;
 
-    public WebCrawler(String baseURL) {
-    	this.index = new Database();
+    public WebCrawler() {
+    	this.database = new Database();
     	this.queue = new LinkQueue();
-        this.queue.add(baseURL);
+    }
+    
+    public void initialize(String baseURL) {
+    	WebPage newPage = new WebPage(this.database.nextId(), baseURL, null);
+    	this.database.add(newPage);
     }
 
     public void start() {
-    	System.out.println("Starting!");
-    	while (this.queue.size() > 0 && this.numPagesCrawled <= this.maxPagesToCrawl) {
+    	System.out.println("Starting! " + this.queue.size());
+    	while (this.database.numUnprocessedPages > 0 && this.numPagesCrawled <= this.maxPagesToCrawl) {
     		
     		// Fetch the HTML code
-    		String url = this.queue.remove();
+    		WebPage currentPage = this.database.getNext();
     		try {
-    			System.out.println("Processing " + url + "...");
+    			System.out.println("Processing " + currentPage.url + "...");
                 
-        		Document document = Jsoup.connect(url).get();
-        		this.index.add(new WebPage(url, document));
-                this.index.save();
-        		
+    			// index the current page:
+        		Document document = Jsoup.connect(currentPage.url).get();
+        		currentPage.parseHTMLData(document);
+        		// don't forget to decrement the # of unprocessed links in the DB:
+        		--this.database.numUnprocessedPages;
                 
-                // Parse the HTML to extract links to other URLs
-                Elements linksOnPage = document.select("a[href]");
-
-                // For each extracted URL... go back to Step 4.
-                for (String link : this.getLinksOnPageUnique(linksOnPage)) {
-                	// add to the queue if not in there already and page hasn't been crawled:
-                	if (this.index.get(link) == null && !this.queue.contains(link)) {
-                		if (link.startsWith("http")) {
-                			this.queue.add(link);
-                		}
-                	} else if (this.index.get(link) != null) {
-                		// if page has already been crawled, increment page rank:
-                		this.index.get(link).numInboundLinks += 1;
+                // Queue up the links that haven't been visited.
+                for (String link : this.getLinksOnPageUnique(document)) {
+                	if (!link.startsWith("http")) {
+                		continue;
                 	}
+                	// create new WebPage object (before it's been processed):
+                	WebPage newPage = new WebPage(this.database.nextId(), link, null);
+                	
+                	// add to the database if the link isn't there already:
+                	if (this.database.get((String)newPage.url) != null) {
+                		this.database.add(newPage);
+                	}
+                	
+                	// add to the queue if not in there already:
+            		this.queue.add(currentPage, newPage);
                 }
+                this.database.save();
                 this.queue.save();
                 
                 ++this.numPagesCrawled;
             } catch (IOException e) {
-                System.err.println("For '" + url + "': " + e.getMessage());
+                System.err.println("For '" + currentPage.url + "': " + e.getMessage());
             }
         	try {
 				Thread.sleep(1000);
@@ -63,7 +70,8 @@ public class WebCrawler {
     	} 
     }
     
-    private HashSet<String> getLinksOnPageUnique(Elements linksOnPage) {
+    private HashSet<String> getLinksOnPageUnique(Document document) {
+        Elements linksOnPage = document.select("a[href]");
     	HashSet<String> s = new HashSet<String>();
     	for (Element linkTag : linksOnPage) {
         	String link = this.getURL(linkTag);
@@ -86,13 +94,20 @@ public class WebCrawler {
 
     public static void main(String[] args) {
     	
-        //1. Pick a URL from the frontier
-    	WebCrawler crawler = new WebCrawler("https://www.unca.edu/");
+        // initialize the crawler:
+    	WebCrawler crawler = new WebCrawler();
+    	
+    	// if there are no links in the queue, initialize:
+    	if (crawler.database.size() == 0) {
+    		crawler.initialize("https://www.unca.edu/");
+    	}
+    	
+    	// begin crawling:
     	crawler.start();
     	System.out.println("Links in the Queue");
     	crawler.queue.print();
     	System.out.println("Links that have been crawled");
-    	crawler.index.print();
+    	crawler.database.print();
     }
 
 }
