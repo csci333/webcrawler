@@ -4,6 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 import org.json.simple.JSONObject;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 public class WebPage implements Comparable<WebPage> {
@@ -30,7 +31,10 @@ public class WebPage implements Comparable<WebPage> {
 		if (descElements.size() > 0) {
 			this.description = descElements.get(0).attr("content");
 		}
-		this.text = this.jsoupDoc.selectFirst("main").text();
+		Element mainElement = this.jsoupDoc.selectFirst("main");
+		if (mainElement != null) {
+			this.text = mainElement.text();
+		}
 	              
 	}
 	

@@ -12,7 +12,7 @@ public class WebCrawler {
 	private Database index;
     private LinkQueue queue;
     private int numPagesCrawled = 0;
-    private int maxPagesToCrawl = 100;
+    private int maxPagesToCrawl = 10;
 
     public WebCrawler(String baseURL) {
     	this.index = new Database();
