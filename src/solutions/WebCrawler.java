@@ -9,58 +9,55 @@ import org.jsoup.select.Elements;
 
 public class WebCrawler {
 
-	private Database database;
-    private LinkQueue queue;
+	private Graph graph;
     private int numPagesCrawled = 0;
-    private int maxPagesToCrawl = 100;
+    private int maxPagesToCrawl = 1;
 
     public WebCrawler() {
-    	this.database = new Database();
-    	this.queue = new LinkQueue();
+    	this.graph = new Graph();
     }
     
     public void initialize(String baseURL) {
-    	WebPage newPage = new WebPage(this.database.nextId(), baseURL, null);
-    	this.database.add(newPage);
+    	WebPage newPage = new WebPage(this.graph.nextId(), baseURL, null);
+    	this.graph.add(newPage);
     }
 
-    public void start() {
-    	System.out.println("Starting! " + this.queue.size());
-    	while (this.database.numUnprocessedPages > 0 && this.numPagesCrawled <= this.maxPagesToCrawl) {
+    public void traverse() {
+    	System.out.println("Starting the traversal: " + this.graph.numUnprocessedPages);
+    	while (this.graph.numUnprocessedPages > 0 && this.numPagesCrawled <= this.maxPagesToCrawl) {
     		
     		// Fetch the HTML code
-    		WebPage currentPage = this.database.getNext();
+    		WebPage currentPage = this.graph.dequeue();
     		try {
     			System.out.println("Processing " + currentPage.url + "...");
                 
     			// index the current page:
         		Document document = Jsoup.connect(currentPage.url).get();
         		currentPage.parseHTMLData(document);
-        		// don't forget to decrement the # of unprocessed links in the DB:
-        		--this.database.numUnprocessedPages;
                 
                 // Queue up the links that haven't been visited.
                 for (String link : this.getLinksOnPageUnique(document)) {
                 	if (!link.startsWith("http")) {
                 		continue;
                 	}
-                	// create new WebPage object (before it's been processed):
-                	WebPage newPage = new WebPage(this.database.nextId(), link, null);
+                	// convert the link to a new page (or get a handle 
+                	// to the page if it already exists in the graph):
+                	WebPage newPage = this.graph.getOrCreate(link);
                 	
-                	// add to the database if the link isn't there already:
-                	if (this.database.get((String)newPage.url) != null) {
-                		this.database.add(newPage);
-                	}
-                	
-                	// add to the queue if not in there already:
-            		this.queue.add(currentPage, newPage);
+                	// add page to the graph (if it's not there already):
+                	this.graph.add(newPage);
+                	currentPage.addOutboundPage(newPage);
                 }
-                this.database.save();
-                this.queue.save();
+                
+                // save the DB and the queue after every iteration:
+                this.graph.save();
                 
                 ++this.numPagesCrawled;
+                
             } catch (IOException e) {
                 System.err.println("For '" + currentPage.url + "': " + e.getMessage());
+                currentPage.crawled = true;
+                this.graph.save();
             }
         	try {
 				Thread.sleep(1000);
@@ -98,16 +95,15 @@ public class WebCrawler {
     	WebCrawler crawler = new WebCrawler();
     	
     	// if there are no links in the queue, initialize:
-    	if (crawler.database.size() == 0) {
+    	if (crawler.graph.size() == 0) {
     		crawler.initialize("https://www.unca.edu/");
     	}
     	
     	// begin crawling:
-    	crawler.start();
-    	System.out.println("Links in the Queue");
-    	crawler.queue.print();
-    	System.out.println("Links that have been crawled");
-    	crawler.database.print();
+    	crawler.traverse();
+    	crawler.graph.processPageRank(1);
+//    	crawler.graph.print();
+    	
     }
 
 }

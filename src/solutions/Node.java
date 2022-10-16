@@ -15,6 +15,7 @@ public class Node {
 		this.to.add(to.id);
 	}
 	
+	@SuppressWarnings("unchecked")
 	public Node(JSONObject obj) {
 		Long from = (Long)obj.get("from");
 		this.from = from.intValue();
