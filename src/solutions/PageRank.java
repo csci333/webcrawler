@@ -13,6 +13,8 @@ public class PageRank {
 
 	public void processPageRank(int iterations) {
 		if (iterations == 0) {
+			// when it hits the base case, save:
+			this.graph.save();
 			return;
 		}
 
@@ -47,9 +49,9 @@ public class PageRank {
 			voter.pageRank += evap;
 		}
 		
-		/***********************/
-		/* get some statistics */
-		/***********************/
+		/*************************************************************/
+		/* output some statistics so we can see page rank converging */
+		/*************************************************************/
 		
 		// calculate new total again:
 		System.out.println("Calculate new totals...");
@@ -66,8 +68,8 @@ public class PageRank {
 		System.out.println("Average diff (" + iterations + "): " + avgDiff);
 		
 		
+		// recurse:
 		processPageRank(iterations - 1);
-		this.graph.save();
 	}
 	
 

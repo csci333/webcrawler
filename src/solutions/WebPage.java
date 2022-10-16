@@ -17,9 +17,9 @@ public class WebPage implements Comparable<WebPage> {
 	public double pageRank = 1;
 	public List<Integer> outboundPageIds = new LinkedList<Integer>();
 
-	private String title = "";
-	private String description = "";
-	private String text = "";
+	public String title = "";
+	public String description = "";
+	public String text = "";
 	
 	
 	public WebPage(int id, String url, Document jsoupDoc) {
