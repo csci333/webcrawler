@@ -2,6 +2,8 @@ package solutions;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -32,18 +34,16 @@ public class WebCrawler {
     		try {
     			System.out.println((numPagesCrawled + 1) + ". Processing " + currentPage.url + "...");
                 
-    			// index the current page:
+    			// pull down the current page and parse the data:
         		Document document = Jsoup.connect(currentPage.url).get();
         		currentPage.parseHTMLData(document);
+        		HashSet<String> urls = this.getUncaLinksOnPageUnique(document);
                 
                 // Queue up the links that haven't been visited.
-                for (String link : this.getUncaLinksOnPageUnique(document)) {
-                	if (!link.startsWith("http")) {
-                		continue;
-                	}
+                for (String url : urls) {
                 	// convert the link to a new page (or get a handle 
                 	// to the page if it already exists in the graph):
-                	WebPage newPage = this.graph.getOrCreate(link);
+                	WebPage newPage = this.graph.getOrCreate(url);
                 	
                 	// add page to the graph (if it's not there already):
                 	this.graph.add(newPage);
@@ -81,17 +81,20 @@ public class WebCrawler {
     }
     
     private String getURL(Element linkTag) {
-    	String link = linkTag.attr("abs:href").trim();
-    	if (link.indexOf("unca.edu") == -1) {
+    	String url = linkTag.attr("abs:href").trim();
+    	if (url.indexOf("unca.edu") == -1) {
     		return null;
     	}
-    	if (link.indexOf("#") != -1) {
-    		link = link.substring(0, link.indexOf("#"));
+    	if (!url.startsWith("http")) {
+    		return null;
     	}
-    	if (link.charAt(link.length()-1) != '/') {
-    		link = link + "/";
+    	if (url.indexOf("#") != -1) {
+    		url = url.substring(0, url.indexOf("#"));
     	}
-    	return link;
+    	if (url.charAt(url.length()-1) != '/') {
+    		url = url + "/";
+    	}
+    	return url;
     }
     
 
@@ -106,7 +109,7 @@ public class WebCrawler {
     	}
     	
     	// begin crawling:
-//    	crawler.traverse(50);
+    	crawler.traverse(50);
     	
 //    	// 90 works!
 //    	crawler.graph.resetPageRanks();
