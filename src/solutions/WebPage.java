@@ -14,14 +14,14 @@ public class WebPage implements Comparable<WebPage> {
 	public int id;
 	public String url;
 	public Boolean crawled = false;
-	public int pageRankOld = 0;
-	public int pageRank = 0;
-	
+	public double pageRankOld = 0;
+	public double pageRank = 1;
+	public List<Integer> outboundPageIds = new LinkedList<Integer>();
+
 	private String title = "";
 	private String description = "";
 	private String text = "";
-	private List<Integer> outboundPageIds = new LinkedList<Integer>();
-
+	
 	
 	public WebPage(int id, String url, Document jsoupDoc) {
 		this.id = id;
@@ -47,8 +47,10 @@ public class WebPage implements Comparable<WebPage> {
 			formattedLinks.add(link.intValue());
 		}
 		this.outboundPageIds = formattedLinks;
-		Long pageRank = (Long)obj.get("page_rank");
-		this.pageRank = pageRank.intValue();
+		double pageRank = (double)obj.get("page_rank");
+		this.pageRank = pageRank;
+		double oldPageRank = (double)obj.get("page_rank_old");
+		this.pageRankOld = oldPageRank;
 	}
 	
 	@Override
@@ -64,6 +66,7 @@ public class WebPage implements Comparable<WebPage> {
 			this.outboundPageIds.add(page.id);
 		}
 	}
+	
 	
 	public void parseHTMLData(Document jsoupDoc) {
 		if (jsoupDoc == null) {
@@ -83,22 +86,27 @@ public class WebPage implements Comparable<WebPage> {
 	
 	@Override
 	public String toString() {
-		return "[" + this.id + "] " + this.url + " \n" + 
-				"   links: " + this.outboundPageIds.toString();
+		return "[" + this.pageRank + "] " + this.url;
+//		+ " \n" + 
+//				"   links: " + this.outboundPageIds.toString();
 	}
 	
-//	public List<Long> getSortedOutboundPageIds() {
-//		List<Long> ids = new ArrayList<Long>();
-//		this.outboundPageIds.sort(null);
-//		for (Integer id : this.outboundPageIds) {
-//			ids.add(Integer.toUnsignedLong(id));
-//		}
-//		return ids;
-//	} 
 	
 	public List<Integer> getSortedOutboundPageIds() {
 		this.outboundPageIds.sort(null);
 		return this.outboundPageIds;
+	}
+	
+	public List<WebPage> getCrawledOutboundPages(Graph graph) {
+		List<WebPage> crawled = new ArrayList<WebPage>();
+		for(Integer id : this.outboundPageIds) {
+			WebPage page = graph.idLookup.get(id);
+			if (page.crawled) {
+				crawled.add(page);
+			}
+		}
+		return crawled;
+		
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -107,6 +115,7 @@ public class WebPage implements Comparable<WebPage> {
 		page.put("id", this.id);
 		page.put("url", this.url);
 		page.put("page_rank", this.pageRank);
+		page.put("page_rank_old", this.pageRankOld);
 		page.put("crawled", this.crawled);
 		page.put("title", this.title);
 		page.put("description", this.description);

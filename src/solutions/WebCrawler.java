@@ -11,7 +11,7 @@ public class WebCrawler {
 
 	private Graph graph;
     private int numPagesCrawled = 0;
-    private int maxPagesToCrawl = 1;
+    private int maxPagesToCrawl = 10;
 
     public WebCrawler() {
     	this.graph = new Graph();
@@ -22,7 +22,8 @@ public class WebCrawler {
     	this.graph.add(newPage);
     }
 
-    public void traverse() {
+    public void traverse(int iterations) {
+    	this.maxPagesToCrawl = iterations;
     	System.out.println("Starting the traversal: " + this.graph.numUnprocessedPages);
     	while (this.graph.numUnprocessedPages > 0 && this.numPagesCrawled <= this.maxPagesToCrawl) {
     		
@@ -60,7 +61,7 @@ public class WebCrawler {
                 this.graph.save();
             }
         	try {
-				Thread.sleep(1000);
+				Thread.sleep(500);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -100,9 +101,13 @@ public class WebCrawler {
     	}
     	
     	// begin crawling:
-    	crawler.traverse();
-    	crawler.graph.processPageRank(1);
+    	crawler.traverse(200);
+    	
+//    	// 90 works!
+//    	crawler.graph.resetPageRanks();
 //    	crawler.graph.print();
+    	crawler.graph.processPageRank(3);
+    	crawler.graph.print();
     	
     }
 
