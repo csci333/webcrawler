@@ -24,20 +24,20 @@ public class WebCrawler {
 
     public void traverse(int iterations) {
     	this.maxPagesToCrawl = iterations;
-    	System.out.println("Starting the traversal: " + this.graph.numUnprocessedPages);
-    	while (this.graph.numUnprocessedPages > 0 && this.numPagesCrawled <= this.maxPagesToCrawl) {
+    	System.out.println("Starting the traversal: " + this.graph.numUnprocessedPages + " unprocessed pages.");
+    	while (this.graph.numUnprocessedPages > 0 && this.numPagesCrawled < this.maxPagesToCrawl) {
     		
     		// Fetch the HTML code
     		WebPage currentPage = this.graph.dequeue();
     		try {
-    			System.out.println("Processing " + currentPage.url + "...");
+    			System.out.println((numPagesCrawled + 1) + ". Processing " + currentPage.url + "...");
                 
     			// index the current page:
         		Document document = Jsoup.connect(currentPage.url).get();
         		currentPage.parseHTMLData(document);
                 
                 // Queue up the links that haven't been visited.
-                for (String link : this.getLinksOnPageUnique(document)) {
+                for (String link : this.getUncaLinksOnPageUnique(document)) {
                 	if (!link.startsWith("http")) {
                 		continue;
                 	}
@@ -68,18 +68,23 @@ public class WebCrawler {
     	} 
     }
     
-    private HashSet<String> getLinksOnPageUnique(Document document) {
+    private HashSet<String> getUncaLinksOnPageUnique(Document document) {
         Elements linksOnPage = document.select("a[href]");
     	HashSet<String> s = new HashSet<String>();
     	for (Element linkTag : linksOnPage) {
-        	String link = this.getURL(linkTag);
-        	s.add(link);
+        	String validatedLink = this.getURL(linkTag);
+        	if (validatedLink != null) {
+        		s.add(validatedLink);
+        	}
         }
     	return s;
     }
     
     private String getURL(Element linkTag) {
     	String link = linkTag.attr("abs:href").trim();
+    	if (link.indexOf("unca.edu") == -1) {
+    		return null;
+    	}
     	if (link.indexOf("#") != -1) {
     		link = link.substring(0, link.indexOf("#"));
     	}
@@ -101,12 +106,13 @@ public class WebCrawler {
     	}
     	
     	// begin crawling:
-    	crawler.traverse(200);
+//    	crawler.traverse(50);
     	
 //    	// 90 works!
 //    	crawler.graph.resetPageRanks();
 //    	crawler.graph.print();
-    	crawler.graph.processPageRank(3);
+    	PageRank pageRanker = new PageRank(crawler.graph);
+    	pageRanker.processPageRank(10);
     	crawler.graph.print();
     	
     }
