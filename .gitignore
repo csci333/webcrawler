@@ -2,3 +2,6 @@ bin
 .DS_Store
 .settings
 *.json
+.classpath
+.project
+.settings
