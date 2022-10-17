@@ -9,90 +9,115 @@ import org.jsoup.select.Elements;
 
 public class WebCrawler {
 
-	private Database index;
-    private LinkQueue queue;
+	private Graph graph;
     private int numPagesCrawled = 0;
     private int maxPagesToCrawl = 10;
 
-    public WebCrawler(String baseURL) {
-    	this.index = new Database();
-    	this.queue = new LinkQueue();
-        this.queue.add(baseURL);
+    public WebCrawler() {
+    	this.graph = new Graph();
+    }
+    
+    public void initialize(String baseURL) {
+    	WebPage newPage = new WebPage(this.graph.nextId(), baseURL, null);
+    	this.graph.add(newPage);
     }
 
-    public void start() {
-    	System.out.println("Starting!");
-    	while (this.queue.size() > 0 && this.numPagesCrawled <= this.maxPagesToCrawl) {
+    public void traverse(int iterations) {
+    	this.maxPagesToCrawl = iterations;
+    	System.out.println("Starting the traversal: " + this.graph.numUnprocessedPages + " unprocessed pages.");
+    	while (this.graph.numUnprocessedPages > 0 && this.numPagesCrawled < this.maxPagesToCrawl) {
     		
     		// Fetch the HTML code
-    		String url = this.queue.remove();
+    		WebPage currentPage = this.graph.dequeue();
     		try {
-    			System.out.println("Processing " + url + "...");
+    			System.out.println((numPagesCrawled + 1) + ". Processing " + currentPage.url + "...");
                 
-        		Document document = Jsoup.connect(url).get();
-        		this.index.add(new WebPage(url, document));
-                this.index.save();
-        		
+    			// pull down the current page and parse the data:
+        		Document document = Jsoup.connect(currentPage.url).get();
+        		currentPage.parseHTMLData(document);
+        		HashSet<String> urls = this.getUncaLinksOnPageUnique(document);
                 
-                // Parse the HTML to extract links to other URLs
-                Elements linksOnPage = document.select("a[href]");
-
-                // For each extracted URL... go back to Step 4.
-                for (String link : this.getLinksOnPageUnique(linksOnPage)) {
-                	// add to the queue if not in there already and page hasn't been crawled:
-                	if (this.index.get(link) == null && !this.queue.contains(link)) {
-                		if (link.startsWith("http")) {
-                			this.queue.add(link);
-                		}
-                	} else if (this.index.get(link) != null) {
-                		// if page has already been crawled, increment page rank:
-                		this.index.get(link).numInboundLinks += 1;
-                	}
+                // Queue up the links that haven't been visited.
+                for (String url : urls) {
+                	// convert the link to a new page (or get a handle 
+                	// to the page if it already exists in the graph):
+                	WebPage newPage = this.graph.getOrCreate(url);
+                	
+                	// add page to the graph (if it's not there already):
+                	this.graph.add(newPage);
+                	currentPage.addOutboundPage(newPage);
                 }
-                this.queue.save();
+                
+                // save the DB and the queue after every iteration:
+                this.graph.save();
                 
                 ++this.numPagesCrawled;
+                
             } catch (IOException e) {
-                System.err.println("For '" + url + "': " + e.getMessage());
+                System.err.println("For '" + currentPage.url + "': " + e.getMessage());
+                currentPage.crawled = true;
+                this.graph.save();
             }
         	try {
-				Thread.sleep(1000);
+				Thread.sleep(500);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
     	} 
     }
     
-    private HashSet<String> getLinksOnPageUnique(Elements linksOnPage) {
+    private HashSet<String> getUncaLinksOnPageUnique(Document document) {
+        Elements linksOnPage = document.select("a[href]");
     	HashSet<String> s = new HashSet<String>();
     	for (Element linkTag : linksOnPage) {
-        	String link = this.getURL(linkTag);
-        	s.add(link);
+        	String validatedLink = this.getURL(linkTag);
+        	if (validatedLink != null) {
+        		s.add(validatedLink);
+        	}
         }
     	return s;
     }
     
     private String getURL(Element linkTag) {
-    	String link = linkTag.attr("abs:href").trim();
-    	if (link.indexOf("#") != -1) {
-    		link = link.substring(0, link.indexOf("#"));
+    	String url = linkTag.attr("abs:href").trim();
+    	if (url.indexOf("unca.edu") == -1) {
+    		return null;
     	}
-    	if (link.charAt(link.length()-1) != '/') {
-    		link = link + "/";
+    	if (!url.startsWith("http")) {
+    		return null;
     	}
-    	return link;
+    	if (url.indexOf("#") != -1) {
+    		url = url.substring(0, url.indexOf("#"));
+    	}
+    	if (url.charAt(url.length()-1) != '/') {
+    		url = url + "/";
+    	}
+    	return url;
     }
     
 
     public static void main(String[] args) {
     	
-        //1. Pick a URL from the frontier
-    	WebCrawler crawler = new WebCrawler("https://www.unca.edu/");
-    	crawler.start();
-    	System.out.println("Links in the Queue");
-    	crawler.queue.print();
-    	System.out.println("Links that have been crawled");
-    	crawler.index.print();
+        // 1. initialize the crawler:
+    	WebCrawler crawler = new WebCrawler();
+    	
+    	// 2. if there are no links in the queue, initialize:
+    	if (crawler.graph.size() == 0) {
+    		crawler.initialize("https://www.unca.edu/");
+    	}
+    	
+    	// 3. crawl 10 pages in the graph:
+    	crawler.traverse(10);
+    	
+    	// 4. create a page rank object to determine the 
+    	// rank of the nodes in the graph:
+    	PageRank pageRanker = new PageRank(crawler.graph);
+    	// pageRanker.resetPageRanks();
+    	pageRanker.processPageRank(5);
+    	
+    	// 5. output the graph (only include crawled pages)
+    	crawler.graph.printCrawledPages();
+    	
     }
 
 }
