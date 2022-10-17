@@ -9,7 +9,11 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import java.text.DecimalFormat;
+
 public class WebPage implements Comparable<WebPage> { 
+    private static final DecimalFormat df = new DecimalFormat("0.0000");
+
 	public int id;
 	public String url;
 	public Boolean crawled = false;
@@ -85,9 +89,7 @@ public class WebPage implements Comparable<WebPage> {
 	
 	@Override
 	public String toString() {
-		return "[" + this.pageRank + "] " + this.url;
-//		+ " \n" + 
-//				"   links: " + this.outboundPageIds.toString();
+		return "[" + df.format(this.pageRank) + "] id=" + this.id + " " + this.url;
 	}
 	
 	

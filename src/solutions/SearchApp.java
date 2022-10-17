@@ -14,11 +14,11 @@ import java.util.Scanner;
  * Takes a graph as an input, where each node of the graph has
  * a pageRank and a text field with keywords.
  */
-public class Searcher {
+public class SearchApp {
 	
 	private Graph graph;
 	
-	public Searcher(Graph graph) {
+	public SearchApp(Graph graph) {
 		this.graph = graph;
 	}
 	
@@ -60,7 +60,7 @@ public class Searcher {
 			}
 			
 			Graph graph = new Graph();
-			Searcher searcher = new Searcher(graph);
+			SearchApp searcher = new SearchApp(graph);
 			List<WebPage> matches = searcher.search(term);
 			searcher.printMatches(matches);
 		}

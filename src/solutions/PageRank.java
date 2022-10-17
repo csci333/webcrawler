@@ -18,11 +18,11 @@ public class PageRank {
 			return;
 		}
 
-		Collection<WebPage> pagesOfInterest = graph.getCrawledPages();
+		Collection<WebPage> crawledPages = graph.getCrawledPages();
 
 		// move pageRank to pageRankOld 
 		double oldTotal = 0.0;
-		for (WebPage voter : pagesOfInterest) {
+		for (WebPage voter : crawledPages) {
 			voter.pageRankOld = voter.pageRank;
 			voter.pageRank = 0;
 			oldTotal = oldTotal + voter.pageRankOld;
@@ -31,21 +31,20 @@ public class PageRank {
 		// assign pageRanks
 		System.out.println("Calculating ranks...");
 		double newTotal = 0.0;
-		for (WebPage voter : pagesOfInterest) {
+		for (WebPage voter : crawledPages) {
+			// only include crawled outbound links in the analysis:
 			List<WebPage> votees = voter.getCrawledOutboundPages(this.graph);
-//			System.out.println(votees.toString());
-			double points = voter.pageRankOld / votees.size();
+			double kudoPoints = voter.pageRankOld / votees.size();
 			for (WebPage votee : votees) {
-//				System.out.println(voter.id + " -> " + votee.id + ", points: " + points);
-				votee.pageRank += points;
-				newTotal += points;
+				votee.pageRank += kudoPoints;
+				newTotal += kudoPoints;
 			}
 		}
 		
 		// evaporation:
 		System.out.println("Evaporation...");
-		double evap = (oldTotal - newTotal) / pagesOfInterest.size();
-		for (WebPage voter : pagesOfInterest) {
+		double evap = (oldTotal - newTotal) / crawledPages.size();
+		for (WebPage voter : crawledPages) {
 			voter.pageRank += evap;
 		}
 		
@@ -56,15 +55,15 @@ public class PageRank {
 		// calculate new total again:
 		System.out.println("Calculate new totals...");
 		newTotal = 0.0;
-		for (WebPage voter : pagesOfInterest) {
+		for (WebPage voter : crawledPages) {
 			newTotal += voter.pageRank;
 		}
 		
 		double totalDiff = 0.0;
-		for (WebPage voter : pagesOfInterest) {
+		for (WebPage voter : crawledPages) {
 			totalDiff += Math.abs(voter.pageRankOld - voter.pageRank);
 		}
-		double avgDiff = totalDiff / pagesOfInterest.size();
+		double avgDiff = totalDiff / crawledPages.size();
 		System.out.println("Average diff (" + iterations + "): " + avgDiff);
 		
 		

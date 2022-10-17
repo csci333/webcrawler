@@ -82,7 +82,7 @@ public class Graph {
 		return this.urlLookup.size();
 	}
 	
-	public void print() {
+	public void printCrawledPages() {
 		// first, sort the pages by their page rank:
 		List<WebPage> pageList = new ArrayList<WebPage>();
 		for (WebPage page : this.urlLookup.values()) {

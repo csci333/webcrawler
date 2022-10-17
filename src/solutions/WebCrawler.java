@@ -2,8 +2,6 @@ package solutions;
 
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.List;
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -100,23 +98,25 @@ public class WebCrawler {
 
     public static void main(String[] args) {
     	
-        // initialize the crawler:
+        // 1. initialize the crawler:
     	WebCrawler crawler = new WebCrawler();
     	
-    	// if there are no links in the queue, initialize:
+    	// 2. if there are no links in the queue, initialize:
     	if (crawler.graph.size() == 0) {
     		crawler.initialize("https://www.unca.edu/");
     	}
     	
-    	// begin crawling:
-    	crawler.traverse(50);
+    	// 3. crawl 10 pages in the graph:
+    	crawler.traverse(10);
     	
-//    	// 90 works!
-//    	crawler.graph.resetPageRanks();
-//    	crawler.graph.print();
+    	// 4. create a page rank object to determine the 
+    	// rank of the nodes in the graph:
     	PageRank pageRanker = new PageRank(crawler.graph);
-    	pageRanker.processPageRank(10);
-    	crawler.graph.print();
+    	// pageRanker.resetPageRanks();
+    	pageRanker.processPageRank(5);
+    	
+    	// 5. output the graph (only include crawled pages)
+    	crawler.graph.printCrawledPages();
     	
     }
 
